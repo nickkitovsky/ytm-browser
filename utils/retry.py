@@ -1,10 +1,16 @@
 import functools
 import time
+from typing import Callable, TypeVar
 
-from ytm_grabber.core.custom_exceptions import TooManyRetryError
+from ytm_browser.core import custom_exceptions
+
+RT = TypeVar("RT")  # return type
 
 
-def retry(attempts_number: int, retry_sleep_sec: int):
+def retry(
+    attempts_number: int,
+    retry_sleep_sec: int,
+) -> Callable[[Callable[..., RT]], Callable[..., RT]]:
     """Retry attempts run of function.
 
     Args:
@@ -18,7 +24,7 @@ def retry(attempts_number: int, retry_sleep_sec: int):
 
     """
 
-    def decarator(func):
+    def decarator(func: Callable[..., RT]) -> Callable[..., RT]:
         @functools.wraps(wrapped=func)
         def wrapper(*args, **kwargs):
             # TODO: For logging change '_' to attempt
@@ -31,9 +37,7 @@ def retry(attempts_number: int, retry_sleep_sec: int):
 
             # TODO: Add logging 'func {func.__name__} retry failed'
             msg = f"Exceed max retry num: {attempts_number} failed."
-            raise TooManyRetryError(
-                msg,
-            )
+            raise custom_exceptions.TooManyRetryError(msg)
 
         return wrapper
 

@@ -8,8 +8,7 @@ from typing import Self
 from curl_cffi import requests
 
 from utils.retry import retry
-from ytm_browser.core import custom_exceptions
-from ytm_browser.core.client import credentials
+from ytm_browser.core import credentials, custom_exceptions
 
 
 class HttpCodes(IntEnum):
@@ -33,6 +32,15 @@ class SyncClient:
         self.credentials = None
         self._session = requests.Session(impersonate="chrome")
         atexit.register(self._session.close, self)
+
+    @classmethod
+    def create_with_credentials(
+        cls,
+        credentails_data: credentials.Credentials | str | Path | list[str],
+    ) -> Self:
+        instance = cls()
+        instance.set_credentials(credentails_data=credentails_data)
+        return instance
 
     def set_credentials(
         self,
@@ -91,7 +99,3 @@ class SyncClient:
         if not self.credentials:
             msg = "Credentials is not set. Please call first set_credentials(credentails_data: credentials.Credentials | str | Path | list[str])."  # noqa: E501
             raise custom_exceptions.CredentialsDataError(msg)
-
-
-class Client(SyncClient):
-    pass

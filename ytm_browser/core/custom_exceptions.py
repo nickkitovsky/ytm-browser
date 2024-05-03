@@ -39,3 +39,7 @@ class FetchResponseError(Exception):
 
 class ChainError(Exception):
     """Error of fetch resonse."""
+
+
+class ResponseError(Exception):
+    """Error of fetch resonse."""

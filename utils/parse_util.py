@@ -4,7 +4,10 @@ from typing import Sequence
 from unicodedata import normalize
 
 
-def extract_chain(json_obj: dict | list, chain: Sequence | None = None) -> list | dict | str | None:
+def extract_chain(
+    json_obj: dict | list,
+    chain: Sequence | None = None,
+) -> list | dict | str | None:
     """Extract chain keys from dict or list.
 
     Skipping signle nested element (len==1). If last argument 'runs', it will be automatically joined to str.
@@ -62,7 +65,9 @@ def _normalize_unicode(unicode_string: str) -> str:
     raise TypeError(msg)
 
 
-def extract_runs(runs_list: list, separator: str | None = "", *, fix_unicode: bool = True) -> str:
+def extract_runs(
+    runs_list: list, separator: str | None = "", *, fix_unicode: bool = True
+) -> str:
     """Join list's fields in 'runs' object to str.
 
     Args:
