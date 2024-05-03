@@ -29,7 +29,6 @@ class SyncClient:
         return cls._instance
 
     def __init__(self) -> None:
-        self.credentials = None
         self._session = requests.Session(impersonate="chrome")
         atexit.register(self._session.close, self)
 
@@ -38,9 +37,9 @@ class SyncClient:
         cls,
         credentails_data: credentials.Credentials | str | Path | list[str],
     ) -> Self:
-        instance = cls()
-        instance.set_credentials(credentails_data=credentails_data)
-        return instance
+        _instance = cls()
+        _instance.set_credentials(credentails_data=credentails_data)
+        return _instance
 
     def set_credentials(
         self,
