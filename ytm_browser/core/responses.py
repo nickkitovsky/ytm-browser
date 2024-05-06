@@ -1,7 +1,7 @@
 import contextlib
+import typing
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Never, Self
 
 from utils import parse_util
 from ytm_browser.core import api_client, custom_exceptions
@@ -15,69 +15,84 @@ class ParseRules:
 
 class AbstractResponse(ABC):
     def __init__(self, raw_response: dict | list) -> None:
-        self._raw_response = raw_response
-        self._title = None
-        self._payload = None
+        self.validate_response(raw_response)
+        self.title = self.parse_title(raw_response)
+        self.payload = self.parse_payload(raw_response)
         self._children = None
 
-    @property
+    def __hash__(self) -> int:
+        return hash((self.title, self.payload))
+
+    def __eq__(self, other: type[typing.Self]) -> bool:
+        if isinstance(other, type(self)):
+            return self.title == other.title and self.payload == other.payload
+        return False
+
     @abstractmethod
-    def title(self) -> str:
+    def parse_title(self, raw_response: dict | list) -> str:
         pass
 
-    @property
     @abstractmethod
-    def payload(self) -> str:
+    def parse_payload(self, raw_response: dict | list) -> dict[str, dict]:
         pass
 
-    @property
     @abstractmethod
-    def _chain_children(self) -> ParseRules:
+    def set_chain_children(self) -> tuple[ParseRules, ...]:
         pass
+
+    @abstractmethod
+    def validate_response(self, raw_response: dict | list) -> None:
+        # Validation check of raw_response,
+        # If raw_response is not valid:
+        # function should raise custom_exceptions.ParsingError exception
+        self._raise_wrong_response_type()
+
+    def _raise_wrong_response_type(self) -> typing.NoReturn:
+        msg = f"Response is not valid {__class__.__name__} type."
+        raise custom_exceptions.ParsingError(msg)
 
     @property
     def children(self) -> list:
-        response = api_client.SyncClient().send_request(self._payload)
-        for current_chain in self._chain_children:
-            with contextlib.suppress(TypeError, KeyError):
-                return parse_util.extract_chain(
-                    json_obj=response,
-                    chain=current_chain.chain,
-                )
+        if not self._children:
+            response = api_client.SyncClient().send_request(self.payload)
+            for current_chain in self.set_chain_children():
+                with contextlib.suppress(TypeError, KeyError):
+                    self._children = parse_util.extract_chain(
+                        json_obj=response,
+                        chain=current_chain.chain,
+                    )
+        return self._children
         msg = "Any valid children chain not found."
         raise custom_exceptions.ParsingError(msg)
 
 
-# Responses list need to import all response types class using `register` decorator
-# if you create custom response type, you should add @register to begining our response class.
+# Responses list need to import all response types class using `@register`
+# if you create custom response type, you should add @register to your response class.  # noqa: E501
 #
 # @register
 # class MyCustomResponse:
 #    pass
-registered_responses: list[type[AbstractResponse]] = []
+registered_responses_types: set[type[AbstractResponse]] = set()
 
 
 def register(decorated: type[AbstractResponse]) -> type[AbstractResponse]:
-    registered_responses.append(decorated)
+    registered_responses_types.add(decorated)
     return decorated
 
 
 @register
 class EndpointResponse(AbstractResponse):
-    @property
-    def title(self) -> str:
-        if not self._title:
-            self._title = self._raw_response.get("title")
-        return self._title
+    def validate_response(self, raw_response: dict | list) -> None:
+        if "payload" not in raw_response:
+            self._raise_wrong_response_type()
 
-    @property
-    def payload(self) -> str:
-        if not self._payload:
-            self._payload = self._raw_response.get("payload")
-        return self._payload
+    def parse_title(self, raw_response: dict | list) -> str:
+        return raw_response.get("title")
 
-    @property
-    def _chain_children(self) -> tuple[ParseRules, ...]:
+    def parse_payload(self, raw_response: dict | list) -> dict[str, dict]:
+        return raw_response.get("payload")
+
+    def set_chain_children(self) -> tuple[ParseRules, ...]:
         return (
             # common_case
             ParseRules(
@@ -88,37 +103,22 @@ class EndpointResponse(AbstractResponse):
 
 @register
 class PlaylistResponse(AbstractResponse):
-    @property
-    def title(self) -> str:
-        if not self._title:
-            self._title = self._parse_title()
-        return self._title
+    def validate_response(self, raw_response: dict | list) -> None:
+        try:
+            parse_util.extract_chain(raw_response, ("aspectRatio",))
+        except KeyError:
+            self._raise_wrong_response_type()
 
-    @property
-    def payload(self) -> str:
-        if not self._payload:
-            self._payload = self._raw_response.get("payload")
-        return self._payload
-
-    @property
-    def _chain_children(self) -> tuple[ParseRules, ...]:
-        return (
-            # common_cases
-            ParseRules(
-                chain=("contents", 0, "content", "content", "contents"),
-            ),
-        )
-
-    def _parse_title(self) -> str:
+    def parse_title(self, raw_response: dict | list) -> str:
         title = parse_util.extract_chain(
-            json_obj=self._raw_response,
+            json_obj=raw_response,
             chain=("title", "runs"),
         )
         subtitle = ""
         try:
             subtitle = str(
                 parse_util.extract_chain(
-                    self._raw_response,
+                    raw_response,
                     ("subtitle", "runs"),
                 ),
             )
@@ -128,8 +128,24 @@ class PlaylistResponse(AbstractResponse):
             title = f"{title} ({subtitle})".strip()
         return title
 
-    def _parse_payload(self) -> dict[str, str]:
-        chains_payload = (
+    def parse_payload(self, raw_response: dict | list) -> dict[str, dict]:
+        for current_chain in self.set_chain_payload():
+            with contextlib.suppress(KeyError):
+                payload = parse_util.extract_chain(
+                    json_obj=raw_response,
+                    chain=current_chain.chain,
+                )
+                if isinstance(payload, dict) and current_chain.return_keys:
+                    return {
+                        key: value
+                        for key, value in payload.items()
+                        if key in current_chain.return_keys
+                    }
+        msg = "Problem of parsing Playlist's response payload"
+        raise custom_exceptions.ParsingError(msg)
+
+    def set_chain_payload(self) -> tuple[ParseRules, ...]:
+        return (
             # listen_again
             ParseRules(
                 chain=(
@@ -154,25 +170,20 @@ class PlaylistResponse(AbstractResponse):
             ),
         )
 
-        for current_chain in chains_payload:
-            with contextlib.suppress(KeyError):
-                payload = parse_util.extract_chain(
-                    json_obj=self._raw_response,
-                    chain=current_chain.chain,
-                )
-                if isinstance(payload, dict) and current_chain.return_keys:
-                    return {
-                        key: value
-                        for key, value in payload.items()
-                        if key in current_chain.return_keys
-                    }
-        msg = "Problem of parsing Playlist's response payload"
-        raise custom_exceptions.ParsingError(msg)
+    def set_chain_children(self) -> tuple[ParseRules, ...]:
+        return (
+            # common_cases
+            ParseRules(
+                chain=("contents", 0, "content", "content", "contents"),
+            ),
+        )
 
 
 @register
-class Track:
+class TrackResponse:
     def __init__(self, raw_response: dict | list) -> None:
+        self.validate_response(raw_response)
+        raw_response = parse_util.extract_chain(json_obj=raw_response)
         self.artist = self._parse_artist(raw_track_data=raw_response)
         self.title = self._parse_trackdata_field(
             raw_track_data=raw_response,
@@ -183,6 +194,24 @@ class Track:
             chain=("lengthText", "runs"),
         )
         self.video_id = raw_response.get("videoId", "")
+
+    def __hash__(self) -> int:
+        return hash(self.video_id)
+
+    def __eq__(self, other: typing.Self) -> bool:
+        if isinstance(other, type(self)):
+            return self.video_id == other.video_id
+        return False
+
+    def validate_response(self, raw_response: dict | list) -> None:
+        try:
+            parse_util.extract_chain(raw_response, chain=("videoId",))
+        except KeyError:
+            self._raise_wrong_response_type()
+
+    def _raise_wrong_response_type(self) -> typing.NoReturn:
+        msg = f"Response is not valid {__class__.__name__} type."
+        raise custom_exceptions.ParsingError(msg)
 
     def _parse_trackdata_field(
         self,
@@ -215,3 +244,19 @@ class Track:
             ),
         )
         return field_type == "MUSIC_PAGE_TYPE_ARTIST"
+
+
+def parse_response(
+    raw_response: dict | list,
+    response_type: type[AbstractResponse] | TrackResponse | None = None,
+) -> type[AbstractResponse] | TrackResponse:
+    match response_type:
+        case response_type if response_type in registered_responses_types:
+            return response_type(raw_response)
+        case None:
+            for current_reponse_type in registered_responses_types:
+                with contextlib.suppress(custom_exceptions.ParsingError):
+                    return current_reponse_type(raw_response)
+
+    msg = "Not found any appropriate response type"
+    raise custom_exceptions.ParsingError(msg)
