@@ -71,8 +71,8 @@ class SyncClient:
         response = self._session.post(
             url=self._set_url(payload=payload),
             timeout=timeout,
-            headers=self.auth_data.headers,
-            params=self.auth_data.params,
+            headers=self.credentials.headers,
+            params=self.credentials.params,
             json=credentials_with_payload,
         )
         match response:
