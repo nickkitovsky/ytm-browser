@@ -61,7 +61,7 @@ class AbstractResponse(ABC):
                         json_obj=response,
                         chain=current_chain.chain,
                     )
-        return self._children
+        return [parse_response(child) for child in self._children]
         msg = "Any valid children chain not found."
         raise custom_exceptions.ParsingError(msg)
 
@@ -246,17 +246,32 @@ class TrackResponse:
         return field_type == "MUSIC_PAGE_TYPE_ARTIST"
 
 
-def parse_response(
-    raw_response: dict | list,
-    response_type: type[AbstractResponse] | TrackResponse | None = None,
-) -> type[AbstractResponse] | TrackResponse:
-    match response_type:
-        case response_type if response_type in registered_responses_types:
-            return response_type(raw_response)
-        case None:
-            for current_reponse_type in registered_responses_types:
-                with contextlib.suppress(custom_exceptions.ParsingError):
-                    return current_reponse_type(raw_response)
+def make_parse_response() -> (
+    typing.Callable[..., AbstractResponse | TrackResponse]
+):
+    previous_response_type = None
+    response_types = list(registered_responses_types)
 
-    msg = "Not found any appropriate response type"
-    raise custom_exceptions.ParsingError(msg)
+    def parse_response(
+        raw_response: list | dict,
+    ) -> AbstractResponse | TrackResponse:
+        nonlocal previous_response_type
+        nonlocal response_types
+        if previous_response_type:
+            start_index = response_types.index(previous_response_type)
+            response_types = (
+                response_types[start_index:] + response_types[:start_index]
+            )
+
+        for response_type in response_types:
+            with contextlib.suppress(custom_exceptions.ParsingError):
+                response = response_type(raw_response)
+                previous_response_type = response_type
+                return response
+        msg = "Not found any appropriate response type"
+        raise custom_exceptions.ParserError(msg)
+
+    return parse_response
+
+
+parse_response = make_parse_response()
