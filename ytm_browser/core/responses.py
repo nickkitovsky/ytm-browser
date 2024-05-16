@@ -64,14 +64,17 @@ class AbstractResponse(ABC):
             response = api_client.SyncClient().send_request(self.payload)
             for current_chain in self.set_chain_children():
                 with contextlib.suppress(TypeError, KeyError):
-                    self._children = parse_util.extract_chain(
+                    raw_children = parse_util.extract_chain(
                         json_obj=response,
                         chain=current_chain.chain,
                     )
-        return [
-            parse_response(parse_util.extract_chain(child))
-            for child in self._children
-        ]
+        if isinstance(raw_children, list):
+            self._children = [
+                parse_response(parse_util.extract_chain(raw_child))
+                for raw_child in raw_children
+            ]
+
+            return self._children
         msg = "Any valid children chain not found."
         raise custom_exceptions.ParsingError(msg)
 
@@ -82,7 +85,7 @@ class AbstractResponse(ABC):
 # @register
 # class MyCustomResponse:
 #    pass
-registered_responses_types: set[type[AbstractResponse] | TrackResponse] = set()  # noqa: F821
+registered_responses_types: set[type[AbstractResponse]] = set()
 
 
 def register(decorated: type[AbstractResponse]) -> type[AbstractResponse]:
@@ -220,7 +223,7 @@ class TrackResponse:
     ) -> None:
         if isinstance(raw_response, dict) and not raw_response.get("videoId"):
             msg = f"Response is not valid {self.__class__.__name__} type."
-            raise custom_exceptions.WrongResponseTypeError(msg)  # noqa: B904
+            raise custom_exceptions.WrongResponseTypeError(msg)
 
     def _parse_trackdata_field(
         self,
