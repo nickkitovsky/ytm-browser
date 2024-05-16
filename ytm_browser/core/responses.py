@@ -40,16 +40,19 @@ class AbstractResponse(ABC):
     def set_chain_children(self) -> tuple[ParseRules, ...]:
         pass
 
-    @abstractmethod
-    def validate_response(self, raw_response: dict | list) -> None:
-        # Validation check of raw_response,
-        # If raw_response is not valid:
-        # function should raise custom_exceptions.ParsingError exception
-        self._raise_wrong_response_type()
-
-    def _raise_wrong_response_type(self) -> typing.NoReturn:
-        msg = f"Response is not valid {__class__.__name__} type."
-        raise custom_exceptions.ParsingError(msg)
+    def validate_response(
+        self,
+        raw_response: dict | list,
+        validate_chain: tuple,
+    ) -> None:
+        try:
+            parse_util.extract_chain(
+                json_obj=raw_response,
+                chain=validate_chain,
+            )
+        except KeyError:
+            msg = f"Response is not valid {__class__.__name__} type."
+            raise custom_exceptions.ParsingError(msg)  # noqa: B904
 
     @property
     def children(self) -> list:
