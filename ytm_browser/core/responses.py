@@ -15,7 +15,8 @@ class ParseRules:
 
 class AbstractResponse(ABC):
     def __init__(self, raw_response: dict | list) -> None:
-        self.validate_response(raw_response)
+        self.validate_response(raw_response=raw_response)
+
         self.title = self.parse_title(raw_response)
         self.payload = self.parse_payload(raw_response)
         self._children = None
@@ -23,36 +24,39 @@ class AbstractResponse(ABC):
     def __hash__(self) -> int:
         return hash((self.title, self.payload))
 
-    def __eq__(self, other: type[typing.Self]) -> bool:
-        if isinstance(other, type(self)):
-            return self.title == other.title and self.payload == other.payload
-        return False
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return self.title == other.title and self.payload == other.payload
+
+    def __str__(self) -> str:
+        return str(self.title)
 
     @abstractmethod
     def parse_title(self, raw_response: dict | list) -> str:
-        pass
+        """Parse title function."""
 
     @abstractmethod
     def parse_payload(self, raw_response: dict | list) -> dict[str, dict]:
-        pass
+        """Parse children payload function."""
 
     @abstractmethod
     def set_chain_children(self) -> tuple[ParseRules, ...]:
-        pass
+        """Set tuple of children payload chains."""
+
+    @abstractmethod
+    def _get_validate_key(self) -> str:
+        """Return string unique key for response type (if key wont found raise WrongResponseTypeError exception)."""  # noqa: E501
 
     def validate_response(
         self,
         raw_response: dict | list,
-        validate_chain: tuple,
     ) -> None:
-        try:
-            parse_util.extract_chain(
-                json_obj=raw_response,
-                chain=validate_chain,
-            )
-        except KeyError:
-            msg = f"Response is not valid {__class__.__name__} type."
-            raise custom_exceptions.ParsingError(msg)  # noqa: B904
+        if isinstance(raw_response, dict) and not raw_response.get(
+            self._get_validate_key(),
+        ):
+            msg = f"Response is not valid {self.__class__.__name__} type."
+            raise custom_exceptions.WrongResponseTypeError(msg)
 
     @property
     def children(self) -> list:
@@ -64,7 +68,10 @@ class AbstractResponse(ABC):
                         json_obj=response,
                         chain=current_chain.chain,
                     )
-        return [parse_response(child) for child in self._children]
+        return [
+            parse_response(parse_util.extract_chain(child))
+            for child in self._children
+        ]
         msg = "Any valid children chain not found."
         raise custom_exceptions.ParsingError(msg)
 
@@ -75,7 +82,7 @@ class AbstractResponse(ABC):
 # @register
 # class MyCustomResponse:
 #    pass
-registered_responses_types: set[type[AbstractResponse]] = set()
+registered_responses_types: set[type[AbstractResponse] | TrackResponse] = set()  # noqa: F821
 
 
 def register(decorated: type[AbstractResponse]) -> type[AbstractResponse]:
@@ -85,10 +92,6 @@ def register(decorated: type[AbstractResponse]) -> type[AbstractResponse]:
 
 @register
 class EndpointResponse(AbstractResponse):
-    def validate_response(self, raw_response: dict | list) -> None:
-        if "payload" not in raw_response:
-            self._raise_wrong_response_type()
-
     def parse_title(self, raw_response: dict | list) -> str:
         return raw_response.get("title")
 
@@ -103,15 +106,12 @@ class EndpointResponse(AbstractResponse):
             ),
         )
 
+    def _get_validate_key(self) -> str:
+        return "payload"
+
 
 @register
 class PlaylistResponse(AbstractResponse):
-    def validate_response(self, raw_response: dict | list) -> None:
-        try:
-            parse_util.extract_chain(raw_response, ("aspectRatio",))
-        except KeyError:
-            self._raise_wrong_response_type()
-
     def parse_title(self, raw_response: dict | list) -> str:
         title = parse_util.extract_chain(
             json_obj=raw_response,
@@ -181,6 +181,9 @@ class PlaylistResponse(AbstractResponse):
             ),
         )
 
+    def _get_validate_key(self) -> str:
+        return "aspectRatio"
+
 
 @register
 class TrackResponse:
@@ -201,20 +204,23 @@ class TrackResponse:
     def __hash__(self) -> int:
         return hash(self.video_id)
 
-    def __eq__(self, other: typing.Self) -> bool:
-        if isinstance(other, type(self)):
-            return self.video_id == other.video_id
-        return False
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return self.video_id == other.video_id
 
-    def validate_response(self, raw_response: dict | list) -> None:
-        try:
-            parse_util.extract_chain(raw_response, chain=("videoId",))
-        except KeyError:
-            self._raise_wrong_response_type()
+    def __str__(self) -> str:
+        return (
+            f"{self.artist} - {self.title} ({self.lenght} [{self.video_id}])"
+        )
 
-    def _raise_wrong_response_type(self) -> typing.NoReturn:
-        msg = f"Response is not valid {__class__.__name__} type."
-        raise custom_exceptions.ParsingError(msg)
+    def validate_response(
+        self,
+        raw_response: dict | list,
+    ) -> None:
+        if isinstance(raw_response, dict) and not raw_response.get("videoId"):
+            msg = f"Response is not valid {self.__class__.__name__} type."
+            raise custom_exceptions.WrongResponseTypeError(msg)  # noqa: B904
 
     def _parse_trackdata_field(
         self,
@@ -267,7 +273,7 @@ def make_parse_response() -> (
             )
 
         for response_type in response_types:
-            with contextlib.suppress(custom_exceptions.ParsingError):
+            with contextlib.suppress(custom_exceptions.WrongResponseTypeError):
                 response = response_type(raw_response)
                 previous_response_type = response_type
                 return response

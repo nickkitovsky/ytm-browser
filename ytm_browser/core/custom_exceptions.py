@@ -29,6 +29,10 @@ class ParsingError(Exception):
     """Error of parsing data."""
 
 
+class WrongResponseTypeError(Exception):
+    """Wrong response type."""
+
+
 class ParserError(Exception):
     """Error of initialize parser."""
 
