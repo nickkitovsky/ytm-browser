@@ -16,7 +16,8 @@ class ParseRules:
 class AbstractResponse(ABC):
     def __init__(self, raw_response: dict | list) -> None:
         self.validate_response(raw_response=raw_response)
-
+        # FIXME: Add self._raw_response for  debug
+        self._raw_response = raw_response
         self.title = self.parse_title(raw_response)
         self.payload = self.parse_payload(raw_response)
         self._children = None
@@ -68,15 +69,16 @@ class AbstractResponse(ABC):
                         json_obj=response,
                         chain=current_chain.chain,
                     )
-        if isinstance(raw_children, list):
-            self._children = [
-                parse_response(parse_util.extract_chain(raw_child))
-                for raw_child in raw_children
-            ]
+                    if isinstance(raw_children, list):
+                        self._children = [
+                            parse_response(parse_util.extract_chain(raw_child))
+                            for raw_child in raw_children
+                        ]
+                        return self._children
+            msg = "Any valid children chain not found."
+            raise custom_exceptions.ParsingError(msg)
 
-            return self._children
-        msg = "Any valid children chain not found."
-        raise custom_exceptions.ParsingError(msg)
+        return self._children
 
 
 # Responses list need to import all response types class using `@register`
