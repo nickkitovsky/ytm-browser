@@ -82,14 +82,15 @@ class SyncClient:
                 msg = "Credentials data is not valid. Please update it."
                 raise custom_exceptions.CredentialsDataError(msg)
             case _:
-                raise requests.models.RequestsError
+                msg = "Unknow response error"
+                raise requests.models.RequestsError(msg)
 
     def _set_url(self, payload: dict[str, str]) -> str:
         match payload:
             case {"browse_id": _} | {"browseId": _}:
                 return "https://music.youtube.com/youtubei/v1/browse"
             case {"playlistId": _} | {"videoId": _}:
-                return "https://music.youtube.com/youtubei/v1/next"
+                return "https://music.youtube.com/youtubei/v1/music/get_queue"
             case _:
                 msg = "Unknow payload type."
                 raise custom_exceptions.PayloadError(msg)

@@ -182,7 +182,7 @@ class PlaylistResponse(AbstractResponse):
         return (
             # common_cases
             ParseRules(
-                chain=("contents", 0, "content", "content", "contents"),
+                chain=("queueDatas",),
             ),
         )
 
