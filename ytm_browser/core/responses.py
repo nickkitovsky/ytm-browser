@@ -16,8 +16,6 @@ class ParseRules:
 class AbstractResponse(ABC):
     def __init__(self, raw_response: dict | list) -> None:
         self.validate_response(raw_response=raw_response)
-        # FIXME: Add self._raw_response for  debug
-        self._raw_response = raw_response
         self.title = self.parse_title(raw_response)
         self.payload = self.parse_payload(raw_response)
         self._children = None
@@ -195,6 +193,7 @@ class TrackResponse:
     def __init__(self, raw_response: dict | list) -> None:
         self.validate_response(raw_response)
         raw_response = parse_util.extract_chain(json_obj=raw_response)
+
         self.artist = self._parse_artist(raw_track_data=raw_response)
         self.title = self._parse_trackdata_field(
             raw_track_data=raw_response,

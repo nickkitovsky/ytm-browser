@@ -1,3 +1,5 @@
+from ytm_browser.core import responses
+
 new_releases = {
     "title": "New releases albums",
     "payload": {"browse_id": "FEmusic_new_releases_albums"},
@@ -15,4 +17,7 @@ library = {
     "payload": {"browse_id": "FEmusic_library_landing"},
 }
 
-endpoints = [new_releases, mixed_for_you, listen_again, library]
+raw_endpoints = [new_releases, mixed_for_you, listen_again, library]
+endpoints = [
+    responses.parse_response(raw_endpoint) for raw_endpoint in raw_endpoints
+]
