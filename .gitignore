@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 /files/auth
 hand_testing.ipynb
+/tests/raw_responses
