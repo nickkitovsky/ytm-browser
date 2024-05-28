@@ -30,7 +30,7 @@ class SyncClient:
 
     def __init__(self) -> None:
         self._session = requests.Session(impersonate="chrome")
-        atexit.register(self._session.close, self)
+        atexit.register(self._session.close)
 
     @classmethod
     def create_with_credentials(
