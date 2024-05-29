@@ -7,15 +7,13 @@ readme = "README.md"
 packages = [{include = "ytm_browser"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 curl-cffi = "^0.6.3"
 pyperclip = "^1.8.2"
-ruff = "^0.4.5"
 
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.4.1"
-mypy = "^1.10.0"
 pytest = "^8.1.1"
 ipykernel = "^6.29.4"
 
