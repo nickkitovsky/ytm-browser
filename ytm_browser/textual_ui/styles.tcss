@@ -1,0 +1,46 @@
+Screen {
+    align: center middle;
+    padding: 1;
+}
+
+ContentSwitcher {
+    background: $panel;
+    border: round $primary;
+    # width: 90%;
+    height: 1fr;
+}
+
+DataTable {
+    background: $panel;
+}
+
+MarkdownH2 {
+    color: gray;
+    border: none;
+    padding: 0;
+    
+}
+
+#settings_grid {
+    layout: vertical;
+    grid-size: 1;
+    # grid-columns: 1fr 5fr;
+
+}
+
+
+.box {
+    border: solid green;
+}
+
+.height_auto {
+    height: auto;
+    padding: 1;
+}
+.width_auto {
+    width: auto;    
+}
+.label_text {
+    margin: 1 5;
+    text-style: bold;
+}
