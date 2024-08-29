@@ -16,6 +16,7 @@ pyperclip = "^1.8.2"
 ruff = "^0.4.1"
 pytest = "^8.1.1"
 ipykernel = "^6.29.4"
+textual-dev = "^1.5.1"
 
 [build-system]
 requires = ["poetry-core"]
@@ -25,7 +26,7 @@ build-backend = "poetry.core.masonry.api"
 fix = true 
 line-length = 79 
 select = ["ALL"] 
-ignore = ["D1", "D203", "D213", "FA102", "ANN101", "ANN102", "TD002", "TD003"] 
+ignore = ["D1", "D203", "D213", "FA102", "ANN101", "ANN102", "TD002", "TD003", "E501"] 
 cache-dir = ".ruff-cache/" 
 
 [tool.ruff.isort] 
