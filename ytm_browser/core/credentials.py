@@ -33,7 +33,7 @@ def read_credentials_from_file(curl_request_file: str | Path) -> Credentials:
 
     Returns:
     -------
-        Self(AuthData): AuthData instance.
+        Self(Credentials): Credentials instance.
 
     """
     if not isinstance(curl_request_file, (str, Path)):
@@ -41,15 +41,14 @@ def read_credentials_from_file(curl_request_file: str | Path) -> Credentials:
         raise TypeError(msg)
     try:
         with Path(curl_request_file).open(encoding="utf-8") as fs:
-            return parse_curl_request(fs.readlines())
+            return fs.readlines()
     except FileNotFoundError as exc:
         msg = "Incorrect file name or Path object"
         raise FileNotFoundError(msg) from exc
 
 
 def read_credentials_from_clipboard() -> Credentials:
-    clipboard_content = pyperclip.paste()
-    return parse_curl_request(clipboard_content.split("\n"))
+    return pyperclip.paste().split("\n")
 
 
 def search_credentials_in_dir(dir_path: str | Path) -> dict[str, Credentials]:
@@ -76,6 +75,16 @@ def search_credentials_in_dir(dir_path: str | Path) -> dict[str, Credentials]:
                     file.name: read_credentials_from_file(file),
                 }
     return credentials_in_dir
+
+
+def dump_credentials(
+    raw_curl_content: list[str],
+    target_file: Path | str,
+) -> Credentials | None:
+    parsed_credentials = parse_curl_request(raw_curl_content=raw_curl_content)
+    with Path.open(Path(target_file), mode="w") as fs:
+        fs.writelines(raw_curl_content)
+    return parsed_credentials
 
 
 def parse_curl_request(raw_curl_content: list[str]) -> Credentials:
@@ -116,4 +125,4 @@ def parse_curl_request(raw_curl_content: list[str]) -> Credentials:
         )
     except (IndexError, json.JSONDecodeError, AttributeError) as exc:
         msg = "error of parse curl_data"
-        raise custom_exceptions.ParsingError(msg) from exc
+        raise custom_exceptions.CredentialsDataError(msg) from exc

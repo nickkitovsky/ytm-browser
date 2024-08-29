@@ -49,14 +49,16 @@ class SyncClient:
             case credentials.Credentials():
                 self.credentials = credentails_data
             case str() | Path():
-                self.credentials = credentials.read_credentials_from_file(
-                    credentails_data,
+                self.credentials = credentials.parse_curl_request(
+                    credentials.read_credentials_from_file(
+                        credentails_data,
+                    )
                 )
             case list() if all(
                 isinstance(line, str) for line in credentails_data
             ):
-                self.credentials = (
-                    credentials.read_credentials_from_clipboard()
+                self.credentials = credentials.parse_curl_request(
+                    credentials.read_credentials_from_clipboard(),
                 )
             case _:
                 msg = "Wrong type of credentials_data"
