@@ -20,14 +20,33 @@ MarkdownH2 {
     padding: 0;
     
 }
+Input.-valid {
+    border: tall $success 60%;
+}
 
+Input.-valid:focus {
+    border: tall $success;
+}
+#validation_result {
+    margin: 0 2;
+}
+
+#buttons {
+    height: 3;
+    width: auto;
+}
 #settings_grid {
     layout: vertical;
     grid-size: 1;
     # grid-columns: 1fr 5fr;
 
 }
-
+.child_grid {
+    layout: grid;
+    grid-size: 2;
+    height: auto;
+    grid-columns: 1fr 11fr;
+}
 
 .box {
     border: solid green;

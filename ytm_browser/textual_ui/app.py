@@ -11,7 +11,7 @@ from textual.widgets import (
     TabPane,
 )
 
-from ytm_browser.textual_ui import settings_tab
+from ytm_browser.textual_ui import browse_tab, settings_tab
 
 BROWSE = """
 # Browse
@@ -64,7 +64,7 @@ class YtMusicApp(App):
                 id=settings_tab.ID,
             )
             with TabPane("Browse", id="browse"):
-                yield Markdown(BROWSE)
+                yield browse_tab.EndpointCollapssible(browse_tab.endpoints[0])
             with TabPane("Download list", id="download"):
                 yield Markdown(DOWNLOAD)
 
