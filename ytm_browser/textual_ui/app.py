@@ -1,6 +1,8 @@
 from typing import Type
 
+from textual import on
 from textual.app import App, ComposeResult
+from textual.containers import Grid, VerticalScroll
 from textual.driver import Driver
 from textual.widgets import (
     Footer,
@@ -11,6 +13,7 @@ from textual.widgets import (
     TabPane,
 )
 
+from ytm_browser.core import api_client, credentials, responses
 from ytm_browser.textual_ui import browse_tab, settings_tab
 
 BROWSE = """
@@ -39,11 +42,13 @@ class YtMusicApp(App):
 
     def __init__(
         self,
+        start_responses: list[responses.AbstractResponse],
         driver_class: type[Driver] | None = None,
         css_path: str | None = None,
         watch_css: bool = False,
     ):
         super().__init__(driver_class, css_path, watch_css)
+        self.start_responses = start_responses
         self.app_paths = {
             "download_dir": "files/music",
             "credentials_dir": "files/auth",
@@ -64,10 +69,18 @@ class YtMusicApp(App):
                 id=settings_tab.ID,
             )
             with TabPane("Browse", id="browse"):
-                yield browse_tab.EndpointCollapssible(browse_tab.endpoints[0])
+                yield browse_tab.BrowseEndpointsWidget()
             with TabPane("Download list", id="download"):
                 yield Markdown(DOWNLOAD)
 
     def action_show_tab(self, tab: str) -> None:
         """Switch to a new tab."""
         self.get_child_by_type(TabbedContent).active = tab
+
+    @on(TabbedContent.TabActivated, pane="#browse")
+    def switch_to_home(self) -> None:
+        api_client.SyncClient.create_with_credentials(
+            credentials.parse_curl_request(
+                self.app_data["auth_data"],
+            )
+        )

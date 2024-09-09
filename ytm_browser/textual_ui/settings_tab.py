@@ -114,6 +114,7 @@ class UserWidget(Static):
     @on(Select.Changed)
     def _select_changed(self, event: Select.Changed) -> None:
         selected_value = str(event.value)
+        self.app.app_data["credential_file"] = selected_value
         self.app.app_data["auth_data"] = self.credentials_files[selected_value]
 
     @on(message_type=Button.Pressed, selector="#add_auth_file_button")
