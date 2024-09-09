@@ -9,6 +9,8 @@ from textual.widgets import Collapsible, Label, Static, Switch
 from ytm_browser.core import responses
 
 if TYPE_CHECKING:
+    from textual.driver import Driver
+
     from ytm_browser.textual_ui.app import YtMusicApp
 
 

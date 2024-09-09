@@ -1,5 +1,6 @@
 from textual import on
 from textual.app import App, ComposeResult
+from textual.containers import Grid, VerticalScroll
 from textual.driver import Driver
 from textual.widgets import (
     Footer,
