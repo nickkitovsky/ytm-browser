@@ -3,8 +3,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterable, Literal
 
 from textual import on
-from textual.app import ComposeResult
-from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
+from textual.containers import Horizontal, Vertical
 from textual.validation import Function, ValidationResult
 from textual.widget import Widget
 from textual.widgets import (
