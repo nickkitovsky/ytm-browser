@@ -1,28 +1,12 @@
+from typing import Literal
+
 from textual import on
 from textual.app import App, ComposeResult
-from textual.containers import Grid, VerticalScroll
 from textual.driver import Driver
-from textual.widgets import (
-    Footer,
-    Markdown,
-    TabbedContent,
-    TabPane,
-)
+from textual.widgets import DataTable, Footer, Markdown, TabbedContent, TabPane
 
 from ytm_browser.core import api_client, credentials, responses
-from ytm_browser.textual_ui import browse_tab, settings_tab
-
-BROWSE = """
-# Browse
-
-Browse.
-"""
-
-DOWNLOAD = """
-# Download
-
-Download.
-"""
+from ytm_browser.textual_ui import browse_tab, download_tab, settings_tab
 
 
 class YtMusicApp(App):
@@ -45,11 +29,15 @@ class YtMusicApp(App):
     ):
         super().__init__(driver_class, css_path, watch_css)
         self.start_responses = start_responses
-        self.app_paths = {
+        self.download_queue: dict[str, responses.PlaylistResponse] = {}
+        self.download_table: DataTable = DataTable(id="download_table")
+        self.app_paths: dict[
+            Literal["download_dir", "credentials_dir"], str
+        ] = {
             "download_dir": "files/music",
             "credentials_dir": "files/auth",
         }
-        self.app_data: dict[str, list] = {
+        self.app_data: dict[Literal["auth_data"], list] = {
             "auth_data": [],
         }
 
@@ -67,7 +55,7 @@ class YtMusicApp(App):
             with TabPane("Browse", id="browse"):
                 yield browse_tab.BrowseEndpointsWidget()
             with TabPane("Download list", id="download"):
-                yield Markdown(DOWNLOAD)
+                yield download_tab.QueueTable()
 
     def action_show_tab(self, tab: str) -> None:
         """Switch to a new tab."""

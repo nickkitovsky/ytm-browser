@@ -30,6 +30,7 @@ class EndpointCollapsible(Collapsible):
         classes: str | None = None,
         disabled: bool = False,
     ) -> None:
+        self.app: YtMusicApp  # define type for self.app for better work IDE
         self.response = response
         self._anchor = Label("")
         super().__init__(
@@ -76,6 +77,23 @@ class EndpointCollapsible(Collapsible):
                         ),
                     )
         return VerticalScroll(*response_children)
+
+    @on(message_type=Switch.Changed)
+    def _add_to_download(self, event: Switch.Changed) -> None:
+        switch_id = str(event.switch.parent.id)
+        element: EndpointCollapsible = self.query_one(
+            selector=f"#{switch_id}"
+        ).query_one("EndpointCollapsible")
+        playlist: responses.EndpointCollapsible = element.response
+
+        if event.value:
+            self.app.download_queue.update({switch_id: playlist})
+            self.app.download_table.add_row(
+                playlist.title, "wait", key=switch_id
+            )
+        else:
+            self.app.download_queue.pop(switch_id)
+            self.app.download_table.remove_row(row_key=switch_id)
 
     def _watch_collapsed(self, collapsed: bool) -> None:
         if not self.collapsed and not self._is_mounted_response:
