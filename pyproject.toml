@@ -10,6 +10,7 @@ packages = [{include = "ytm_browser"}]
 python = "^3.12"
 curl-cffi = "^0.6.3"
 pyperclip = "^1.8.2"
+yt-dlp = "^2024.8.6"
 
 
 [tool.poetry.group.dev.dependencies]
